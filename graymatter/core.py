@@ -6,10 +6,13 @@ import numpy as np
 from warnings import warn
 
 from sklearn.base import BaseEstimator
-from sklearn.utils import check_arrays, unique, type_of_input
+from sklearn.utils import check_arrays
+from sklearn.utils.multiclass import type_of_target, unique_labels
 
 from pylearn2.datasets import DenseDesignMatrix
 from pylearn2.models import mlp
+from pylearn2.training_algorithms.sgd import SGD
+from pylearn2.termination_criteria import EpochCounter
 
 __all__ = ['MLP']
 
@@ -32,7 +35,6 @@ class MLP(BaseEstimator):
 
     scaling_learning_rate : float, optional
         
-
     batch_size : int, optional
         Number of examples per minibatch.
 
@@ -60,10 +62,16 @@ class MLP(BaseEstimator):
     dropout : bool, optional
         Whether to use dropout or not. Defaults to False.
 
-    dropout_probs : list of floats, 
+    dropout_probs : list of floats
         The dropout probability. Only used when dropout=True.
         The values are between 0.01 and 1.
         Defaults to [.8, .5, 1.0].
+
+    type_of_y : string, optional
+        If this parameter is not None, then when y is passed to fit there will
+        be an assertion check that the intended type of y is the inferred type.
+        See the docstring for MLP.fit.
+        Defaults to None.
 
     verbose : int, optional.
         The verbosity level. A higher level will print convergence criteria.
@@ -96,8 +104,8 @@ class MLP(BaseEstimator):
     def __init__(self, layers=[10], learning_rate=0.1, batch_size=10,
                  max_iter=10, irange_init=0.1, init_bias=1.0, momentum=0.5,
                  convolutional_input=False, hidden_layer_type='rect_linear',
-                 dropout=False, dropout_probs=[.8, .5, 1], verbose=0,
-                 random_state=None):
+                 dropout=False, dropout_probs=[.8, .5, 1], type_of_y=None,
+                 verbose=0, random_state=None):
         self.layers = layers
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -106,6 +114,7 @@ class MLP(BaseEstimator):
         self.hidden_layer_type = hidden_layer_type
         self.dropout = dropout
         self.dropout_probs = dropout_probs
+        self.type_of_y = type_of_y
         self.verbose = verbose
         self.random_state = random_state
         self.validate_params()
@@ -152,8 +161,13 @@ class MLP(BaseEstimator):
         y = np.atleast_1d(y)
 
         self.type_of_target_ = type_of_target(y)
-        if verbose > 0:
+        if self.verbose > 0:
             print("The inferred type of y is %s" % self.type_of_target_)
+        if self.type_of_y != None:
+            if self.type_of_y != self.type_of_target_:
+                print("Passed type of y is %s, inferred type is %s"
+                      % (self.type_of_y, self.type_of_target_))
+                raise("derp")
 
         self.check_type_implemented()
 
@@ -182,12 +196,14 @@ class MLP(BaseEstimator):
             hidden_size = self.layers[ind]
             if self.hidden_layer_type == 'rect_linear':
                 layers.append(
-                    mlp.RectifiedLinear(layer_name=layer_name, hidden_size,
-                                        irange=self.irange_init, init_bias))
+                    mlp.RectifiedLinear(
+                        hidden_size, layer_name=layer_name,
+                        irange=self.irange_init, init_bias=init_bias))
             elif self.hidden_layer_type == 'sigmoid':
                 layers.append(
-                    mlp.Sigmoid(layer_name=layer_name, hidden_size,
-                                irange=self.irange_init, init_bias))
+                    mlp.Sigmoid(
+                        hidden_size, layer_name=layer_name,
+                        irange=self.irange_init, init_bias=init_bias))
             else:
                 # TODO
                 # Not implemented error?
@@ -195,12 +211,11 @@ class MLP(BaseEstimator):
 
         # Add the output layer.
         if self.type_of_target in ['binary', 'multiclass-multioutput']:
-            layers.append(mlp.Sigmoid(layer_name='output',
-                                      self.output_size_,
+            layers.append(mlp.Sigmoid(self.output_size_,
+                                      layer_name='output',
                                       irange=self.irange_init))
         elif self.type_of_target == 'multiclass':
-            layers.append(mlp.SoftMax(layer_name='output',
-                                      self.output_size_
+            layers.append(mlp.SoftMax(self.output_size_, layer_name='output',
                                       irange=self.irange_init))
         else:
             # TODO
@@ -208,3 +223,30 @@ class MLP(BaseEstimator):
             raise('derp')
         # Create the ANN object for pylearn2
         self.network_ = mlp.MLP(layers, nvis=self.n_features)
+
+    def _fit_mlp(self, X, y):
+        # Create Pylearn2 dataset object.
+        # TODO
+        # How does this allocate memory on CPU? GPU?
+        pyl_dataset = Dataset(X, y)
+        # Create Pylearn2 training object
+        # TODO
+        # Monitor based termination criteria?
+        self.trainer = SGD(learning_rate=self.learning_rate,
+                           batch_size=self.batch_size,
+                           termination_criterion=EpochCounter(self.max_iter))
+        self.trainer.setup(self.network_, pyl_dataset)
+        while True:
+            self.trainer.train(pyl_dataset)
+            self.network_.monitor.report_epoch()
+            self.network_.monitor()
+            if not self.trainer.continue_learning(self.network_):
+                break
+
+
+class Dataset(DenseDesignMatrix):
+
+    def __init__(self, X, y):
+        if len(y.shape) == 1:
+            y = y.reshape(-1, 1)
+        super(Dataset, self).__init__(X=X, y=y)
