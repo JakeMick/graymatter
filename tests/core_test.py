@@ -1,12 +1,11 @@
 from sklearn.datasets import make_classification
-from ..graymatter import MLP
+from graymatter.core import MLP
 
 
 def check_if_fit():
-    mlp = core.mlp()
-    mlp = core.MLP()
+    model = MLP()
     X, y = make_classification()
-    mlp.fit(X, y)
+    model.fit(X, y)
 
 if __name__ == "__main__":
     check_if_fit()

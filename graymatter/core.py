@@ -5,6 +5,7 @@ MLP estimators wrapping Pylearn2
 import numpy as np
 from warnings import warn
 
+from sklearn.preprocessing import LabelBinarizer
 from sklearn.base import BaseEstimator
 from sklearn.utils import check_arrays
 from sklearn.utils.multiclass import type_of_target, unique_labels
@@ -110,6 +111,8 @@ class MLP(BaseEstimator):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.max_iter = max_iter
+        self.irange_init = irange_init
+        self.init_bias = init_bias
         self.convolutional_input = convolutional_input
         self.hidden_layer_type = hidden_layer_type
         self.dropout = dropout
@@ -170,8 +173,8 @@ class MLP(BaseEstimator):
                 raise("derp")
 
         self.check_type_implemented()
-
-        self._inst_mlp(n_features)
+        y = self._get_output(y)
+        self._inst_mlp()
         self._fit_mlp(X, y)
 
     def validate_params(self):
@@ -186,7 +189,19 @@ class MLP(BaseEstimator):
     def predict_proba(self, X):
         pass
 
-    def _inst_mlp(self, n_features):
+    def _get_output(self, y):
+        if self.type_of_target_ == 'binary' or 'continuous':
+            self.output_size_ = 1
+            return y
+        elif self.type_of_target == 'multiclass' or 'multiclass-multioutout':
+            self.lb = LabelBinarizer()
+            y = self.lb.fit_transform(y)
+            self.output_size = y.shape[1]
+            return y
+        else:
+            raise('derp')
+
+    def _inst_mlp(self):
         # A list to hold all of the hidden and output layers.
         layers = []
 
@@ -198,31 +213,32 @@ class MLP(BaseEstimator):
                 layers.append(
                     mlp.RectifiedLinear(
                         hidden_size, layer_name=layer_name,
-                        irange=self.irange_init, init_bias=init_bias))
+                        irange=self.irange_init, init_bias=self.init_bias))
             elif self.hidden_layer_type == 'sigmoid':
                 layers.append(
                     mlp.Sigmoid(
                         hidden_size, layer_name=layer_name,
-                        irange=self.irange_init, init_bias=init_bias))
+                        irange=self.irange_init, init_bias=self.init_bias))
             else:
                 # TODO
                 # Not implemented error?
                 raise('derp')
 
         # Add the output layer.
-        if self.type_of_target in ['binary', 'multiclass-multioutput']:
+        if self.type_of_target_ in ['binary', 'multiclass-multioutput']:
             layers.append(mlp.Sigmoid(self.output_size_,
-                                      layer_name='output',
+                                      'output',
                                       irange=self.irange_init))
-        elif self.type_of_target == 'multiclass':
-            layers.append(mlp.SoftMax(self.output_size_, layer_name='output',
+        elif self.type_of_target_ == 'multiclass':
+            layers.append(mlp.SoftMax(self.output_size_,
+                                      'output',
                                       irange=self.irange_init))
         else:
             # TODO
             # Not implemented error?
             raise('derp')
         # Create the ANN object for pylearn2
-        self.network_ = mlp.MLP(layers, nvis=self.n_features)
+        self.network_ = mlp.MLP(layers, nvis=self.input_size_)
 
     def _fit_mlp(self, X, y):
         # Create Pylearn2 dataset object.
