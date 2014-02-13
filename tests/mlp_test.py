@@ -1,5 +1,5 @@
 from sklearn.datasets import make_classification
-from graymatter.core import MLP
+from graymatter.mlp import MLP
 
 
 def check_if_fit():
