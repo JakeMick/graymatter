@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/JakeMick/graymatter.png?branch=master)](https://travis-ci.org/JakeMick/graymatter)
+
 Graymatter
 ==========
 Graymatter provides an adaptor on top of the [pylearn2](deeplearning.net/software/pylearn2/)
