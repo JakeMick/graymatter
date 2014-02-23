@@ -23,9 +23,25 @@ This is licensed under MIT, so you can fork/merge/whatever you want with it.
 
 Requirements
 ============
-theano
-pylearn2
-scikit-learn
+
+    pylearn2
+    scikit-learn
+
+Using the GPU
+=============
+Create a file, ~/.theanorc with the following contents.
+
+    [global]
+    floatX = float32
+    device = gpu0
+    
+    [nvcc]
+    fastmath = True
+
+When you initialize the model, STDOUT should be something like
+
+    Using gpu device 0: GeForce GTX 560 Ti
+
 
 Example
 =======
@@ -39,5 +55,4 @@ Example
     model = MLP(dropout=True)
     model.fit(X_train, y_train)
     model.predict(X_test)
-
 
