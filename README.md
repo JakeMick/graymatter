@@ -5,18 +5,37 @@ Graymatter
 Graymatter provides an adaptor on top of the [pylearn2](deeplearning.net/software/pylearn2/)
 GPU neural network library in the style of [scikit-learn](http://scikit-learn.org/stable/)
 for integration with scikit-learn's utilities. Graymatter is not affliated with
-either project. (Though I'll provide upstream bug-fixes when they arise.)
+either project.
 
-Currently there's a testsuite for parameter configurations. Some parameter
-combinations result in strange behavior in the compiled theano that throws
-errors in pylearn2, such as a high learning rate with a high max column norm.
-I'm working on catching them at init time.
+The interface to pylearn2 is dramatically simplified. As a result, it will never
+be possible to create all the functionality you could with YAML in pylearn2.
+
+For instance,
+
+ - Weight initilization parameters are shared across the layers.
+ - Arbitrary hidden layer configurations aren't possible.
+
+There's no simple way to create a tree-like API in the spirit of scikit-learn.
+
+Currently,
+
+ - Units per hidden layer are configurable.
+ - Type of hidden layers are configurable.
+ - Dropout is configurable.
+
+In the future,
+ - maxout and support for convolutional inputs
+
+The design departs from scikit-learn. Instead of providing
+MLPClassifier and MLPRegressor, Graymatter provides MLP which infers the type
+of y. Multiclass and multioutput regression types are handled. If this bugs you
+you can pass type\_of\_y as an input argument to assert what you expect y to be.
 
 The purpose of this project is to create a stable api over some of the core
 functionality of pylearn2.models.mlp. Pull requests and github issues for
 bug-fixes and feature-enhancement are welcome.
 
-The code is mostly self-documenting in the docstrings. In IPython,
+The code is self-documenting in the docstrings. In IPython,
 graymatter.MLP? has a complete list of the configurable parameters.
 
 This is licensed under MIT, so you can fork/merge/whatever you want with it.
