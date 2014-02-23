@@ -45,7 +45,7 @@ When you initialize the model, STDOUT should be something like
 
 Example
 =======
-    from graymatter.nn import MLP
+    from graymatter import MLP
     from sklearn.datasets import make_classification
 
     X, y = make_classification(100)
