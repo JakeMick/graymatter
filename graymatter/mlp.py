@@ -355,7 +355,7 @@ class MLP(BaseEstimator):
         if self.dropout:
             cost = Dropout(input_include_probs=self.dropout_[0],
                            input_scales=self.dropout_[1])
-            if verbose > 0:
+            if self.verbose > 0:
                 print("Dropout probs for layers:", self.dropout)
         else:
             cost = None

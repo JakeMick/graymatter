@@ -1,10 +1,12 @@
 from sklearn.datasets import make_classification, make_regression
 from sklearn.metrics import log_loss
+from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
+import numpy as np
 from ..mlp import MLP
 
 
-class TestFitting(object):
+class TestMLP(object):
 
     def __init__(self):
         sc = StandardScaler()
@@ -30,6 +32,10 @@ class TestFitting(object):
     def test_dropout(self):
         model = MLP(dropout='True')
         model.fit(self.X_cl, self.y_cl)
+        linear = LinearRegression()
+        linear.fit(model.predict(self.X_cl), self.y_cl)
+        assert (np.abs(1.0 - linear.coef_[0]) < 0.05)
+        assert (np.abs(1.0 - linear.intercept_) < 0.05)
 
     def test_accuracy(self):
         model = MLP()
