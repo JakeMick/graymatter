@@ -245,7 +245,7 @@ class MLP(BaseEstimator):
                 layers.append(
                     mlp.Sigmoid(
                         dim=hidden_size, layer_name=layer_name,
-                        irange=self.irange_init))
+                        irange=self.irange_init, max_col_norm=self.max_col_norm))
             else:
                 # TODO
                 # Not implemented error?
