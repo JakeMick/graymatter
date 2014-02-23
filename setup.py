@@ -7,5 +7,5 @@ setup(name='graymatter',
       description='An sklearn api for pylearn2',
       author='Jacob Mick',
       author_email='jacob.mick@gmail.com',
-      packages=['nn'],
+      packages=['graymatter'],
       )

@@ -301,12 +301,16 @@ class MLP(BaseEstimator):
         elif self.type_of_target_ in ['continuous-multioutput', 'continuous']:
             layers.append(
                 mlp.Linear(dim=self.output_size_, layer_name='output',
-                           irange=self.irange_init, init_bias=self.init_bias))
+                           irange=self.irange_init, init_bias=self.init_bias,
+                           max_col_norm=self.max_col_norm))
         else:
             # Not implemented error?
             raise('derp')
         # Create the ANN object for pylearn2
         self.network_ = mlp.MLP(layers, nvis=self.input_size_)
+        if self.verbose > 0:
+            print("Network weights initialized to",
+                  self.network_.get_weights())
 
     def _build_ext(self):
         self.extensions = []
