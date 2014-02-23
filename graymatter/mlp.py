@@ -167,7 +167,8 @@ class MLP(BaseEstimator):
         self.convolutional_input = convolutional_input
         self.hidden_layer_type = hidden_layer_type
         self.dropout = dropout
-        self.dropout_probs = [input_dropout_prob, hidden_dropout_prob]
+        self.input_dropout_prob = input_dropout_prob
+        self.hidden_dropout_prob = hidden_dropout_prob
         self.type_of_y = type_of_y
         self.verbose = verbose
         self.random_state = random_state
@@ -285,10 +286,12 @@ class MLP(BaseEstimator):
             # Make the include probablities for dropout
             if self.dropout:
                 if ind == 0:
-                    self.dropout_[0][layer_name] = self.dropout_probs[0]
+                    self.dropout_[0][layer_name] = self.input_dropout_prob
                 else:
-                    self.dropout_[0][layer_name] = self.dropout_probs[1]
-                self.dropout_[1][layer_name] = 1.0
+                    self.dropout_[0][layer_name] = self.hidden_dropout_prob
+                # At evaluation time, we scale the outputs by the dropout proba
+                self.dropout_[1][layer_name] = 1.0 / \
+                    self.dropout_[0][layer_name]
 
         # Add the output layer.
         if self.type_of_target_ in ['binary', 'multiclass-multioutput']:
@@ -352,6 +355,8 @@ class MLP(BaseEstimator):
         if self.dropout:
             cost = Dropout(input_include_probs=self.dropout_[0],
                            input_scales=self.dropout_[1])
+            if verbose > 0:
+                print("Dropout probs for layers:", self.dropout)
         else:
             cost = None
         self.sgd_ = SGD(learning_rate=self.learning_rate,
