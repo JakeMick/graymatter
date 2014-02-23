@@ -1,2 +1,2 @@
 -e git://github.com/lisa-lab/pylearn2.git#egg=pylearn2
-sklearn
+scikit-learn
