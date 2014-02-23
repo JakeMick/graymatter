@@ -61,11 +61,14 @@ class MLP(BaseEstimator):
         The initial training momentum.
 
     convolutional_input : bool, optional
-        The input layer shares weights.
+        TODO, not implemented
+
 
     hidden_layer_type : string, optional
         The type of the hidden layer. Available options are 'rect_linear',
-        'sigm', ... defaults to 'rect_linear'.
+        'sigm'
+        defaults to 'rect_linear'.
+        TODO, other layers not implemented
 
     dropout : bool, optional
         Whether to use dropout or not. Defaults to False.
