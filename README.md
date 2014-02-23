@@ -7,7 +7,7 @@ GPU neural network library in the style of [scikit-learn](http://scikit-learn.or
 for integration with scikit-learn's utilities. Graymatter is not affliated with
 either project.
 
-The interface to pylearn2 is dramatically simplified. As a result, it will never
+The interface to pylearn2 is simplified. As a result, it will never
 be possible to create all the functionality you could with YAML in pylearn2.
 
 For instance,
@@ -22,6 +22,10 @@ Currently,
  - Units per hidden layer are configurable.
  - Type of hidden layers are configurable.
  - Dropout is configurable.
+ - Learning rate with decay is configurable.
+ - Momentum with saturation is configurable.
+ - Sigmoidal and Rectified Linear layers are available.
+ - Weight initialization is configurable.
 
 In the future,
  - maxout and support for convolutional inputs
