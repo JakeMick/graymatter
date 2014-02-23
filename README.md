@@ -27,8 +27,27 @@ Requirements
     pylearn2
     scikit-learn
 
+Pylearn2 is install from git. They don't have a release cycle, as far as I can
+tell.
+
 Using the GPU
 =============
+This assumes you're using Ubuntu 12.04 with a working pylearn2 installation,
+
+    sudo apt-get install libblas-dev gfortran g++ liblapack-dev
+
+NVIDIA provides a deb package for CUDA
+
+    wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1204/x86_64/cuda-repo-ubuntu1204_5.5-0_amd64.deb
+    sudo dpkg -i cuda-repo-ubuntu1204_5.5-0_amd64.deb
+    sudo apt-get update
+    sudo apt-get install cuda
+
+Add the following lines to your ~/.bashrc
+
+    export PATH=/usr/local/cuda-5.5/bin:$PATH
+    export LD_LIBRARY_PATH=/usr/local/cuda-5.5/lib64:$LD_LIBRARY_PATH
+
 Create a file, ~/.theanorc with the following contents.
 
     [global]
