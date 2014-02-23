@@ -201,8 +201,7 @@ class MLP(BaseEstimator):
         pass
 
     def predict(self, X):
-        self.network_.fprop(theano.shared(X, name='inputs')).eval()
-        pass
+        return self.network_.fprop(theano.shared(X, name='inputs')).eval()
 
     def predict_proba(self, X):
         return self.network_.fprop(theano.shared(X, name='inputs')).eval()
