@@ -7,6 +7,21 @@ GPU neural network library in the style of [scikit-learn](http://scikit-learn.or
 for integration with scikit-learn's utilities. Graymatter is not affliated with
 either project.
 
+Example
+=======
+    from graymatter import MLP
+    from sklearn.datasets import make_classification
+
+    X, y = make_classification(100)
+    X_train, y_train = X[:50], y[:50]
+    X_test, y_test = X[50:], y[50:]
+
+    model = MLP(dropout=True)
+    model.fit(X_train, y_train)
+    model.predict(X_test)
+
+Functionality
+=============
 The interface to pylearn2 is simplified. As a result, it will never
 be possible to create all the functionality you could with YAML in pylearn2.
 
@@ -56,6 +71,18 @@ Requirements
 Pylearn2 is install from git. They don't have a release cycle, as far as I can
 tell.
 
+Installation
+============
+
+    python setup.py build
+    python setup.py install
+
+Testing
+=======
+In the repository directory
+
+    nosetests
+
 Using the GPU
 =============
 This assumes you're using Ubuntu 12.04 with a working pylearn2 installation,
@@ -87,17 +114,8 @@ When you initialize the model, STDOUT should be something like
 
     Using gpu device 0: GeForce GTX 560 Ti
 
-
-Example
-=======
-    from graymatter import MLP
-    from sklearn.datasets import make_classification
-
-    X, y = make_classification(100)
-    X_train, y_train = X[:50], y[:50]
-    X_test, y_test = X[50:], y[50:]
-
-    model = MLP(dropout=True)
-    model.fit(X_train, y_train)
-    model.predict(X_test)
-
+Scaling your inputs
+===================
+Neural networks are very sensitive to scaling and we're using float32. Scale
+your inputs if they're not close to a mean of 0, std of 1. If you're performing
+regression or multioutput regression, then it's advisable to scale those as well.
