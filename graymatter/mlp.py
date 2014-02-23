@@ -301,8 +301,7 @@ class MLP(BaseEstimator):
         elif self.type_of_target_ in ['continuous-multioutput', 'continuous']:
             layers.append(
                 mlp.Linear(dim=self.output_size_, layer_name='output',
-                           irange=self.irange_init, init_bias=self.init_bias,
-                           max_col_norm=self.max_col_norm))
+                           irange=self.irange_init, init_bias=self.init_bias))
         else:
             # Not implemented error?
             raise('derp')
