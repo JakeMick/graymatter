@@ -14,6 +14,7 @@ import theano
 
 from pylearn2.datasets import DenseDesignMatrix
 from pylearn2.models import mlp
+from pylearn2.train import Train
 from pylearn2.training_algorithms.sgd import SGD
 from pylearn2.termination_criteria import EpochCounter
 
@@ -120,13 +121,16 @@ class MLP(BaseEstimator):
         self.max_iter = max_iter
         self.irange_init = irange_init
         self.init_bias = init_bias
+        self.momentum = momentum
         self.convolutional_input = convolutional_input
         self.hidden_layer_type = hidden_layer_type
         self.dropout = dropout
-        self.dropout_probs = dropout_probs
+        self.dropout_probs = [input_dropout_prob, hidden_dropout_prob]
         self.type_of_y = type_of_y
         self.verbose = verbose
         self.random_state = random_state
+        # TODO impl extensions
+        self.extensions = None
         self.validate_params()
 
     def fit(self, X, y):
@@ -191,6 +195,7 @@ class MLP(BaseEstimator):
         pass
 
     def predict(self, X):
+        self.network_.fprop(theano.shared(X, name='inputs')).eval()
         pass
 
     def predict_proba(self, X):
@@ -219,7 +224,7 @@ class MLP(BaseEstimator):
             if self.hidden_layer_type == 'rect_linear':
                 layers.append(
                     mlp.RectifiedLinear(
-                        hidden_size, layer_name=layer_name,
+                        dim=hidden_size, layer_name=layer_name,
                         irange=self.irange_init, init_bias=self.init_bias))
             elif self.hidden_layer_type == 'sigmoid':
                 layers.append(
@@ -236,10 +241,12 @@ class MLP(BaseEstimator):
             layers.append(mlp.Sigmoid(dim=self.output_size_,
                                       layer_name='output', irange=self.irange_init, init_bias=self.init_bias))
         elif self.type_of_target_ == 'multiclass':
-            layers.append(mlp.SoftMax(self.output_size_, 'output',
+            layers.append(mlp.SoftMax(self.output_size_, layer_name='output',
                                       irange=self.irange_init))
+        elif self.type_of_target_ in ['continuous-multioutput', 'continuous']:
+            layers.append(mlp.Linear(self.output_size_, layer_name='output',
+                                     irange=self.irange_init))
         else:
-            # TODO
             # Not implemented error?
             raise('derp')
         # Create the ANN object for pylearn2
@@ -252,17 +259,13 @@ class MLP(BaseEstimator):
         # TODO
         # Monitor based termination criteria?
         # Define costs
-        self.trainer = SGD(learning_rate=self.learning_rate,
-                           init_momentum=self.init_momentum,
-                           batch_size=self.batch_size,
-                           termination_criterion=EpochCounter(self.max_iter))
-        self.trainer.setup(self.network_, pyl_dataset)
-        while True:
-            self.trainer.train(pyl_dataset)
-            self.network_.monitor.report_epoch()
-            self.network_.monitor()
-            if not self.trainer.continue_learning(self.network_):
-                break
+        self.sgd_ = SGD(learning_rate=self.learning_rate,
+                        init_momentum=self.momentum,
+                        batch_size=self.batch_size,
+                        termination_criterion=EpochCounter(self.max_iter))
+        job = Train(pyl_dataset, self.network_,
+                    self.sgd_, extensions=self.extensions)
+        job.main_loop()
 
 
 class Dataset(DenseDesignMatrix):
