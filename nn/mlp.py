@@ -15,7 +15,8 @@ import theano
 from pylearn2.datasets import DenseDesignMatrix
 from pylearn2.models import mlp
 from pylearn2.train import Train
-from pylearn2.training_algorithms.sgd import SGD
+from pylearn2.training_algorithms.sgd import SGD, MomentumAdjustor,\
+    LinearDecayOverEpoch
 from pylearn2.termination_criteria import EpochCounter
 from pylearn2.costs.mlp.dropout import Dropout
 
@@ -60,9 +61,31 @@ class MLP(BaseEstimator):
     momentum : float, optional
         The initial training momentum.
 
+    sat_momentum : bool, optional
+        Whether or not the momentum is saturated.
+        Defaults to true
+
+    sat_momentum_epoch : integer or string, optional
+        Controls the epoch that the momentum reaches it's final value.
+        Defaults to 'half'
+
+    sat_momentum_final : float, optional
+        The final value that the momentum is saturated to.
+        Defaults to 0.65
+    
+    linear_decay : bool, optional
+        Whether or not to use linear decay when training SGD.
+        Defaults to True.
+
+    linear_decay_epoch : int or string, optional
+        'half', 'last' or the number of epochs to decay at.
+
+    linear_decay_factor : float, optional
+        Decay factor used when linear_decay is True.
+        Defaults to 0.01
+
     convolutional_input : bool, optional
         TODO, not implemented
-
 
     hidden_layer_type : string, optional
         The type of the hidden layer. Available options are 'rect_linear',
@@ -89,7 +112,7 @@ class MLP(BaseEstimator):
         See the docstring for MLP.fit.
         Defaults to None.
 
-    verbose : int, optional.
+    verbose : int, optional
         The verbosity level. A higher level will print convergence criteria.
         Defaults to 0.
 
@@ -119,10 +142,14 @@ class MLP(BaseEstimator):
 
     def __init__(self, layers=[100], learning_rate=0.01, batch_size=10,
                  max_iter=10, irange_init=0.05, init_bias=0.0,
-                 max_col_norm=1.9365, momentum=0.5, convolutional_input=False,
+                 max_col_norm=1.9365, momentum=0.5, sat_momentum=True,
+                 sat_momentum_epoch='half', sat_momentum_final=0.65,
+                 linear_decay=True, linear_decay_epoch='last',
+                 linear_decay_factor=0.01, convolutional_input=False,
                  hidden_layer_type='rect_linear', dropout=False,
                  input_dropout_prob=0.8, hidden_dropout_prob=0.5,
                  type_of_y=None, verbose=0, random_state=None):
+
         self.layers = layers
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -131,6 +158,12 @@ class MLP(BaseEstimator):
         self.init_bias = init_bias
         self.max_col_norm = max_col_norm
         self.momentum = momentum
+        self.sat_momentum = sat_momentum
+        self.sat_momentum_epoch = sat_momentum_epoch
+        self.sat_momentum_final = sat_momentum_final
+        self.linear_decay = linear_decay
+        self.linear_decay_factor = linear_decay_factor
+        self.linear_decay_epoch = linear_decay_epoch
         self.convolutional_input = convolutional_input
         self.hidden_layer_type = hidden_layer_type
         self.dropout = dropout
@@ -138,8 +171,6 @@ class MLP(BaseEstimator):
         self.type_of_y = type_of_y
         self.verbose = verbose
         self.random_state = random_state
-        # TODO impl extensions
-        self.extensions = None
         self.validate_params()
 
     def fit(self, X, y):
@@ -277,12 +308,44 @@ class MLP(BaseEstimator):
         # Create the ANN object for pylearn2
         self.network_ = mlp.MLP(layers, nvis=self.input_size_)
 
+    def _build_ext(self):
+        self.extensions = []
+        if self.sat_momentum:
+            if self.sat_momentum_epoch == 'half':
+                sat_epoch = self.max_iter / 2
+            elif type(self.sat_momentum_epoch) == 'int':
+                sat_epoch = self.sat_momentum_epoch
+                if sat_epoch > self.max_iter:
+                    raise("Sat_momemtum_epoch must be leq to max_iter")
+            else:
+                raise("Sat_momentum_epoch must be int or 'half'")
+            self.extensions.append(MomentumAdjustor(start=1,
+                                                    saturate=sat_epoch,
+                                                    final_momentum=self.sat_momentum_final))
+
+        if self.linear_decay:
+            if self.linear_decay_epoch == 'half':
+                decay_epoch = self.max_iter / 2
+            if self.linear_decay_epoch == 'last':
+                decay_epoch = self.max_iter
+            elif type(self.linear_decay_epoch) == 'int':
+                decay_epoch = self.linear_decay_epoch
+                if decay_epoch > self.max_iter:
+                    raise("Linear_decay_epoch must be leq to max_iter")
+            else:
+                raise("Linear_decay_epoch must be int or 'half'")
+            self.extensions.append(LinearDecayOverEpoch(start=1,
+                                                        saturate=decay_epoch,
+                                                        decay_factor=self.linear_decay_factor))
+
+        if self.sat_momentum == False and self.linear_decay == false:
+            self.extensions = None
+
     def _fit_mlp(self, X, y):
         # Create Pylearn2 dataset object.
         pyl_dataset = Dataset(X, y)
+        self._build_ext()
         # Create Pylearn2 training object
-        # TODO
-        # Monitor based termination criteria?
         if self.dropout:
             cost = Dropout(input_include_probs=self.dropout_[0],
                            input_scales=self.dropout_[1])
