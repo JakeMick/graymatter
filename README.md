@@ -8,8 +8,11 @@ either project. (Though I'll provide upstream bug-fixes when they arise.)
 Currently there's a testsuite for parameter configurations. Some parameter
 combinations result in strange behavior in the compiled theano that throws
 errors in pylearn2, such as a high learning rate with a high max column norm.
-I'm working on catching them at and creating a stable api over some of the core
-functionality of pylearn2.models.mlp. Pull requests and github issues are welcome.
+I'm working on catching them at init time.
+
+The purpose of this project is to create a stable api over some of the core
+functionality of pylearn2.models.mlp. Pull requests and github issues for
+bug-fixes and feature-enhancement are welcome.
 
 The code is mostly self-documenting in the docstrings. In IPython,
 graymatter.MLP? has a complete list of the configurable parameters.
