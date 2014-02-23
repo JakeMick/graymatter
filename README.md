@@ -25,6 +25,9 @@ Currently,
 
 In the future,
  - maxout and support for convolutional inputs
+ - additional neural network types
+ - unsupervised pretraining
+ - serialization support
 
 The design departs from scikit-learn. Instead of providing
 MLPClassifier and MLPRegressor, Graymatter provides MLP which infers the type
