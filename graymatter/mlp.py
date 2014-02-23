@@ -17,6 +17,7 @@ from pylearn2.models import mlp
 from pylearn2.train import Train
 from pylearn2.training_algorithms.sgd import SGD
 from pylearn2.termination_criteria import EpochCounter
+from pylearn2.costs.mlp.dropout import Dropout
 
 __all__ = ['MLP']
 
@@ -52,6 +53,9 @@ class MLP(BaseEstimator):
     init_bias : float, optional
         Weight initilization for the biases.
         Defaults to TODO
+
+    max_col_norm : float, optional
+        Max column norm for layers that need it, like Rectified Linear.
 
     momentum : float, optional
         The initial training momentum.
@@ -110,10 +114,11 @@ class MLP(BaseEstimator):
     >>> import numpy as np...
     """
 
-    def __init__(self, layers=[10], learning_rate=0.1, batch_size=10,
-                 max_iter=10, irange_init=0.1, init_bias=1.0, momentum=0.5,
-                 convolutional_input=False, hidden_layer_type='rect_linear',
-                 dropout=False, input_dropout_prob=0.8, hidden_dropout_prob=0.5,
+    def __init__(self, layers=[100], learning_rate=0.01, batch_size=10,
+                 max_iter=10, irange_init=0.05, init_bias=0.0,
+                 max_col_norm=1.9365, momentum=0.5, convolutional_input=False,
+                 hidden_layer_type='rect_linear', dropout=False,
+                 input_dropout_prob=0.8, hidden_dropout_prob=0.5,
                  type_of_y=None, verbose=0, random_state=None):
         self.layers = layers
         self.learning_rate = learning_rate
@@ -121,6 +126,7 @@ class MLP(BaseEstimator):
         self.max_iter = max_iter
         self.irange_init = irange_init
         self.init_bias = init_bias
+        self.max_col_norm = max_col_norm
         self.momentum = momentum
         self.convolutional_input = convolutional_input
         self.hidden_layer_type = hidden_layer_type
@@ -216,6 +222,13 @@ class MLP(BaseEstimator):
     def _inst_mlp(self):
         # A list to hold all of the hidden and output layers.
         layers = []
+        # Probability dictionaries for dropout
+        # The first is the probability of inclusion,
+        # The second is the scaling of the probabilities at fprop eval time.
+        # TODO
+        # Why would anyone want anything other than 1.0 at eval time?
+        if self.dropout:
+            self.dropout_ = [{}, {}]
 
         # Add the hidden layer.
         for ind in xrange(len(self.layers)):
@@ -225,27 +238,37 @@ class MLP(BaseEstimator):
                 layers.append(
                     mlp.RectifiedLinear(
                         dim=hidden_size, layer_name=layer_name,
-                        irange=self.irange_init, init_bias=self.init_bias))
-            elif self.hidden_layer_type == 'sigmoid':
+                        irange=self.irange_init, max_col_norm=self.max_col_norm))
+            elif self.hidden_layer_type == 'sigm':
                 layers.append(
                     mlp.Sigmoid(
                         dim=hidden_size, layer_name=layer_name,
-                        irange=self.irange_init, init_bias=self.init_bias))
+                        irange=self.irange_init))
             else:
                 # TODO
                 # Not implemented error?
                 raise('derp')
+
+            # Make the include probablities for dropout
+            if self.dropout:
+                if ind == 0:
+                    self.dropout_[0][layer_name] = self.dropout_probs[0]
+                else:
+                    self.dropout_[0][layer_name] = self.dropout_probs[1]
+                self.dropout_[1][layer_name] = 1.0
 
         # Add the output layer.
         if self.type_of_target_ in ['binary', 'multiclass-multioutput']:
             layers.append(mlp.Sigmoid(dim=self.output_size_,
                                       layer_name='output', irange=self.irange_init, init_bias=self.init_bias))
         elif self.type_of_target_ == 'multiclass':
-            layers.append(mlp.SoftMax(self.output_size_, layer_name='output',
-                                      irange=self.irange_init))
+            layers.append(
+                mlp.SoftMax(dim=self.output_size_, layer_name='output',
+                            irange=self.irange_init, init_bias=self.init_bias))
         elif self.type_of_target_ in ['continuous-multioutput', 'continuous']:
-            layers.append(mlp.Linear(self.output_size_, layer_name='output',
-                                     irange=self.irange_init))
+            layers.append(
+                mlp.Linear(dim=self.output_size_, layer_name='output',
+                           irange=self.irange_init, init_bias=self.init_bias))
         else:
             # Not implemented error?
             raise('derp')
@@ -258,10 +281,15 @@ class MLP(BaseEstimator):
         # Create Pylearn2 training object
         # TODO
         # Monitor based termination criteria?
-        # Define costs
+        if self.dropout:
+            cost = Dropout(input_include_probs=self.dropout_[0],
+                           input_scales=self.dropout_[1])
+        else:
+            cost = None
         self.sgd_ = SGD(learning_rate=self.learning_rate,
                         init_momentum=self.momentum,
                         batch_size=self.batch_size,
+                        cost=cost,
                         termination_criterion=EpochCounter(self.max_iter))
         job = Train(pyl_dataset, self.network_,
                     self.sgd_, extensions=self.extensions)
