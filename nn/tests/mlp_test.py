@@ -1,15 +1,19 @@
 from sklearn.datasets import make_classification, make_regression
 from sklearn.metrics import log_loss
+from sklearn.preprocessing import StandardScaler
 from ..mlp import MLP
 
 
 class TestFitting(object):
 
     def __init__(self):
+        sc = StandardScaler()
         self.X_cl, self.y_cl = make_classification(100)
-        self.X_re, self.y_re = make_classification(100)
+        self.X_cl = sc.fit_transform(self.X_cl)
+        self.X_re, self.y_re = make_regression(100)
+        self.X_re = sc.fit_transform(self.X_re)
 
-    def test_if_fit_classification():
+    def test_if_fit_classification(self):
         model = MLP()
         model.fit(self.X_cl, self.y_cl)
         assert(model.type_of_target_ == 'binary')
