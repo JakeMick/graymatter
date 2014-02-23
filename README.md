@@ -27,7 +27,7 @@ scikit-learn
 
 Example
 =======
-    from graymatter import MLP
+    from graymatter.nn import MLP
     from sklearn.datasets import make_classification
 
     X, y = make_classification(100)
