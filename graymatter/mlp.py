@@ -141,7 +141,7 @@ class MLP(BaseEstimator):
     >>> import numpy as np...
     """
 
-    def __init__(self, layers=[100], learning_rate=0.01, batch_size=10,
+    def __init__(self, layers=[100], learning_rate=0.05, batch_size=10,
                  max_iter=10, irange_init=0.05, init_bias=0.0,
                  max_col_norm=1.9365, momentum=0.5, sat_momentum=True,
                  sat_momentum_epoch='half', sat_momentum_final=0.65,
