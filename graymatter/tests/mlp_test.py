@@ -9,11 +9,8 @@ from ..mlp import MLP
 class TestMLP(object):
 
     def __init__(self):
-        sc = StandardScaler()
         self.X_cl, self.y_cl = make_classification(100)
-        self.X_cl = sc.fit_transform(self.X_cl)
         self.X_re, self.y_re = make_regression(100)
-        self.X_re = sc.fit_transform(self.X_re)
 
     def test_if_fit_classification(self):
         model = MLP()
@@ -30,12 +27,14 @@ class TestMLP(object):
         model.fit(self.X_cl, self.y_cl)
 
     def test_dropout(self):
-        model = MLP(dropout='True')
-        model.fit(self.X_cl, self.y_cl)
+        model = MLP(max_iter=100, dropout='True')
+        model.fit(self.X_re, self.y_re)
         linear = LinearRegression()
-        linear.fit(model.predict(self.X_cl), self.y_cl)
-        assert (np.abs(1.0 - linear.coef_[0]) < 0.05)
-        assert (np.abs(1.0 - linear.intercept_) < 0.05)
+        linear.fit(model.predict(self.X_re).reshape(-1, 1),
+                   self.y_re.reshape(-1, 1))
+        assert(model.type_of_target_ == 'continuous')
+        assert (np.abs(1 - linear.coef_[0]) < 0.05)
+        assert (np.abs(linear.intercept_) < 0.05)
 
     def test_accuracy(self):
         model = MLP()
