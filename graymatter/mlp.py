@@ -5,8 +5,9 @@ MLP estimators wrapping Pylearn2
 import numpy as np
 from warnings import warn
 
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import LabelBinarizer, StandardScaler
 from sklearn.base import BaseEstimator
+from sklearn.linear_model import LinearRegression
 from sklearn.utils import check_arrays
 from sklearn.utils.multiclass import type_of_target, unique_labels
 
@@ -226,8 +227,11 @@ class MLP(BaseEstimator):
 
         self.check_type_implemented()
         y = self._get_output(y)
+        X, y = self._scale(X, y)
         self._inst_mlp()
         self._fit_mlp(X, y)
+        if self.dropout and self.type_of_target_ in ['continuous', 'continuous-multioutput']:
+            self._lineregress(X, y)
 
     def validate_params(self):
         pass
@@ -236,22 +240,46 @@ class MLP(BaseEstimator):
         pass
 
     def predict(self, X):
-        return self.network_.fprop(theano.shared(X, name='inputs')).eval()
+        return self.predict_proba(X)
 
     def predict_proba(self, X):
+        X_valid = self.X_sc.transform(X)
+        if self.type_of_target_ in ['continuous', 'continuous-multioutput']:
+            if self.dropout:
+                y_valid = self.linear.predict(self._fprop(X_valid))
+            else:
+                y_valid = self._fprop(X_valid)
+            return self.y_sc.inverse_transform(y_valid)
+        return self._fprop(X_valid)
+
+    def _lineregress(self, X, y):
+        """ Scaling inputs when dropout
+        """
+        self.linear = LinearRegression()
+        self.linear.fit(self._fprop(X), y)
+
+    def _fprop(self, X):
         return self.network_.fprop(theano.shared(X, name='inputs')).eval()
 
     def _get_output(self, y):
         if self.type_of_target_ == 'binary' or 'continuous':
             self.output_size_ = 1
             return y
-        elif self.type_of_target == 'multiclass' or 'multiclass-multioutout':
+        elif self.type_of_target_ in ['multiclass' or 'multiclass-multioutout']:
             self.lb = LabelBinarizer()
             y = self.lb.fit_transform(y)
             self.output_size = y.shape[1]
             return y
         else:
             raise('derp')
+
+    def _scale(self, X, y):
+        self.X_sc = StandardScaler()
+        X = self.X_sc.fit_transform(X)
+        if self.type_of_target_ in ['continuous', 'continuous-multioutput']:
+            self.y_sc = StandardScaler()
+            y = self.y_sc.fit_transform(y)
+        return X, y
 
     def _inst_mlp(self):
         # A list to hold all of the hidden and output layers.
@@ -356,7 +384,7 @@ class MLP(BaseEstimator):
             cost = Dropout(input_include_probs=self.dropout_[0],
                            input_scales=self.dropout_[1])
             if self.verbose > 0:
-                print("Dropout probs for layers:", self.dropout)
+                print("Dropout probs for layers:", self.dropout_)
         else:
             cost = None
         self.sgd_ = SGD(learning_rate=self.learning_rate,
