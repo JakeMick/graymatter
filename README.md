@@ -113,9 +113,3 @@ Create a file, ~/.theanorc with the following contents.
 When you initialize the model, STDOUT should be something like
 
     Using gpu device 0: GeForce GTX 560 Ti
-
-Scaling your inputs
-===================
-Neural networks are very sensitive to scaling and we're using float32. Scale
-your inputs if they're not close to a mean of 0, std of 1. If you're performing
-regression or multioutput regression, then it's advisable to scale those as well.
