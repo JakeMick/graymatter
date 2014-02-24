@@ -100,7 +100,7 @@ class MLP(BaseEstimator):
     input_dropout_prob : float, optional
         The dropout probability for the input layer. Only used when dropout=True.
         The values are between 0.01 and 1.
-        Defaults to .8
+        Defaults to 0.8
 
     hidden_dropout_prob : float, optional
         The dropout probability for the hidden layer(s). Only used when dropout=True.
