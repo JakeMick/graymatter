@@ -327,8 +327,8 @@ class MLP(BaseEstimator):
                                       layer_name='output', irange=self.irange_init, init_bias=self.init_bias))
         elif self.type_of_target_ == 'multiclass':
             layers.append(
-                mlp.SoftMax(dim=self.output_size_, layer_name='output',
-                            irange=self.irange_init, init_bias=self.init_bias))
+                mlp.Softmax(self.output_size_, layer_name='output',
+                            irange=self.irange_init))
         elif self.type_of_target_ in ['continuous-multioutput', 'continuous']:
             layers.append(
                 mlp.Linear(dim=self.output_size_, layer_name='output',
