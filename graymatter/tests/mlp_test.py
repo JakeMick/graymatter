@@ -10,6 +10,8 @@ class TestMLP(object):
 
     def __init__(self):
         self.X_cl, self.y_cl = make_classification(100)
+        self.X_mcl, self.y_mcl = make_classification(
+            1000, n_informative=5, n_classes=3)
         self.X_re, self.y_re = make_regression(100)
 
     def test_if_fit_classification(self):
@@ -42,3 +44,7 @@ class TestMLP(object):
         y_pred = model.predict_proba(self.X_cl[50:])
         ll = log_loss(self.y_cl[50:], y_pred)
         assert(ll < .05)
+
+    def test_multiclass(self):
+        model = MLP()
+        model.fit(self.X_mcl, self.y_mcl)
