@@ -7,7 +7,6 @@ from warnings import warn
 
 from sklearn.preprocessing import LabelBinarizer, StandardScaler
 from sklearn.base import BaseEstimator
-from sklearn.linear_model import LinearRegression
 from sklearn.utils import check_arrays
 from sklearn.utils.multiclass import type_of_target, unique_labels
 
@@ -230,8 +229,8 @@ class MLP(BaseEstimator):
         X, y = self._scale(X, y)
         self._inst_mlp()
         self._fit_mlp(X, y)
-        if self.dropout and self.type_of_target_ in ['continuous', 'continuous-multioutput']:
-            self._lineregress(X, y)
+        if self.dropout:
+            self._scale_network()
 
     def validate_params(self):
         pass
@@ -245,21 +244,28 @@ class MLP(BaseEstimator):
     def predict_proba(self, X):
         X_valid = self.X_sc.transform(X)
         if self.type_of_target_ in ['continuous', 'continuous-multioutput']:
-            if self.dropout:
-                y_valid = self.linear.predict(self._fprop(X_valid))
-            else:
-                y_valid = self._fprop(X_valid)
+            y_valid = self._fprop(X_valid)
             return self.y_sc.inverse_transform(y_valid)
         return self._fprop(X_valid)
 
-    def _lineregress(self, X, y):
-        """ Scaling inputs when dropout
-        """
-        self.linear = LinearRegression()
-        self.linear.fit(self._fprop(X), y)
-
     def _fprop(self, X):
         return self.network_.fprop(theano.shared(X, name='inputs')).eval()
+
+    def _scale_network(self):
+        """ If we used dropout, we have to scale the weights
+        """
+        if True:
+            pass
+        else:
+            param_vals = self.network_.get_param_values()
+            theano_params = self.network_.get_params()
+            for ind, val in enumerate(theano_params):
+                layer_name, layer_type = val.name.split('_')
+                if layer_name in self.dropout_[0]:
+                    if layer_type == 'b':
+                        dropped_proba = self.dropout_[0][layer_name]
+                        param_vals[ind] = dropped_proba * param_vals[ind]
+            self.network_.set_param_values(param_vals)
 
     def _get_output(self, y):
         if self.type_of_target_ == 'binary' or 'continuous':
@@ -317,7 +323,6 @@ class MLP(BaseEstimator):
                     self.dropout_[0][layer_name] = self.input_dropout_prob
                 else:
                     self.dropout_[0][layer_name] = self.hidden_dropout_prob
-                # At evaluation time, we scale the outputs by the dropout proba
                 self.dropout_[1][layer_name] = 1.0 / \
                     self.dropout_[0][layer_name]
 
